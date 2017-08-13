@@ -1,8 +1,12 @@
+###################################################################
+
+library(stats)
+library(cluster)
+library(dbscan)
+
 #BASE 10
 
 data <- read.csv("base-10.csv", header=FALSE)
-library(stats)
-library(cluster)
 
 grupos <- data$V2
 data$V1 <- NULL
@@ -11,23 +15,9 @@ data$V2297 <- NULL
 
 data <- data/255.0
 
-clusters <- kmeans(data,4)
-
-hc <- hclust(dist(data))
-clusters2 <- cutree(hc, k = 4)
-
-dissE <- daisy(data) #-> large (!)  3000 x 3000 / 2
-sk <- silhouette(clusters$cluster, dissE) #KMEANS
-sk <- silhouette(clusters2, dissE)
-plot(sk)
-
-########################################################################
 #BASE 6
 
 data <- read.csv("base-6.csv", header=FALSE)
-library(stats)
-library(cluster)
-
 grupos <- data$V2
 data$V1 <- NULL
 data$V2 <- NULL
@@ -35,6 +25,37 @@ data$V6451 <- NULL
 
 data <- data/255.0
 
+write.csv(data, "base-6-sNA.csv", row.names=FALSE, col.names=FALSE)
+
+#BASE CORES1
+
+data <- read.csv("base-cores.csv", header=FALSE)
+grupos <- data$V2
+data$V1 <- NULL
+data$V2 <- NULL
+
+#BASE CORES2
+
+data <- read.csv("base-cores2.csv", header=FALSE)
+grupos <- data$V2
+data$V1 <- NULL
+data$V2 <- NULL
+data$V33 <- NULL
+
+#BASE CORES3
+
+data <- read.csv("base-cores3.csv", header=FALSE)
+grupos <- data$V2
+data$V1 <- NULL
+data$V2 <- NULL
+data$V13 <- NULL
+
+########################################################################
+#PRÉ PROCESSAMENTO
+
+#LIMPAR NAs
+
+which(is.na(data) == TRUE)
 for(i in 1:nrow(data)){
 	for(j in 1:ncol(data)){
 		if(is.na(data[i,j]))
@@ -44,9 +65,6 @@ for(i in 1:nrow(data)){
 	print(i/nrow(data))
 }
 
-which(is.na(data) == TRUE)
-########################################################################
-#PRÉ PROCESSAMENTO
 #FUNCAO DEGRAU
 limite1 <- 0.5
 limite2 <- 0.95
@@ -63,17 +81,16 @@ for(i in 1:nrow(data)){
 	print(i/nrow(data))
 }
 
-algorithm = c("Hartigan-Wong", "Lloyd", "Forgy", "MacQueen")
+#REMOCAO DE BORDA SUPERIOR
 
-clusters <- kmeans(data,2, algorithm="Hartigan-Wong")
-
-hc <- hclust(dist(data))
-clusters2 <- cutree(hc, k = 2)
-
-dissE <- daisy(data) #-> large (!)  3000 x 3000 / 2
-sk <- silhouette(clusters$cluster, dissE) #KMEANS
-sk <- silhouette(clusters2, dissE) #HIERARQUICO
-plot(sk)
+data <- data[,-(1:309)]
+apagar <- c()
+for(i in 1:58){
+	apagar[i] <- i*103
+	apagar[58+i] <- (i*103)+1
+	apagar[2*58+i] <- (i*103)+2
+}
+data <- data[,-apagar]
 
 #############################################################################
 #PCA
@@ -84,6 +101,31 @@ plot(pca$x)
 predict(pca, newdata=tail(data, 2))
 
 ############################################################################
+#ALGORITMOS
+
+
+grupo <- 2
+
+#K-MEANS
+algorithm = c("Hartigan-Wong", "Lloyd", "Forgy", "MacQueen")
+clusters <- kmeans(data,grupo, algorithm="MacQueen")
+
+#HIERARQUICO
+hc <- hclust(dist(data))
+clusters2 <- cutree(hc, k = grupo)
+
+#DBSCAN
+
+clusters <- dbscan(data, 2, 3)
+
+#AVALIACAO
+dissE <- daisy(data) #-> large (!)  3000 x 3000 / 2
+sk <- silhouette(clusters$cluster, dissE) #KMEANS
+sk <- silhouette(clusters2, dissE) #HIERARQUICO
+sk <- silhouette(clusters$cluster, dissE) #DBSCAN
+plot(sk)
+
+########################################################################
 #PLOT
 
 library(devtools)
@@ -99,16 +141,16 @@ g <- g + theme(legend.direction = 'horizontal',
 print(g)
 
 library(scatterplot3d)
-attach(pca$x)
+attach(data)
 
 #PARA SALVAR EM IMAGEM
 for(i in 1:360){
-png(paste(i,".png"))
+png(paste("GIF//",paste(i,".png")))
 scatterplot3d(pca$x[1,], pca$x[2,], pca$x[3,], xlim=c(-5,5), ylim=c(-5,5), zlim=c(-5,5), angle=i, main="3D Scatterplot")
 dev.off()
 }
 
 #PLOTAR ANIMAÇÃO
-for(i in 1:360){
-scatterplot3d(pca$x[1,], pca$x[2,], pca$x[3,], xlim=c(-5,5), ylim=c(-5,5), zlim=c(-5,5), angle=i, main="3D Scatterplot")
+for(i in 1:80){
+scatterplot3d(pca$x[1,], pca$x[2,], pca$x[3,], angle=i, main="3D Scatterplot")
 }
