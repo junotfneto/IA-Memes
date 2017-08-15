@@ -45,6 +45,11 @@ data$V33 <- NULL
 #BASE CORES3
 
 data <- read.csv("base-cores3.csv", header=FALSE)
+indices <- which(data$V2 == "InesBrasil")
+data <- data[-indices,]
+indices <- which(data$V2 == "Bahls")
+data <- data[-indices,]
+
 grupos <- data$V2
 data$V1 <- NULL
 data$V2 <- NULL
@@ -104,26 +109,36 @@ predict(pca, newdata=tail(data, 2))
 #ALGORITMOS
 
 
-grupo <- 2
+grupo <- 3
 
 #K-MEANS
 algorithm = c("Hartigan-Wong", "Lloyd", "Forgy", "MacQueen")
-clusters <- kmeans(data,grupo, algorithm="MacQueen")
+clusters <- kmeans(data,grupo, algorithm="MacQueen")$cluster
+
+clusters <- k.means(data,grupo)$clustering
 
 #HIERARQUICO
 hc <- hclust(dist(data))
-clusters2 <- cutree(hc, k = grupo)
+clusters <- cutree(hc, k = grupo)
 
 #DBSCAN
 
-clusters <- dbscan(data, 2, 3)
+clusters <- dbscan(data, 0.91, 2)$cluster
 
+#########################################################################
 #AVALIACAO
+
+#SILHUETA
 dissE <- daisy(data) #-> large (!)  3000 x 3000 / 2
 sk <- silhouette(clusters$cluster, dissE) #KMEANS
 sk <- silhouette(clusters2, dissE) #HIERARQUICO
 sk <- silhouette(clusters$cluster, dissE) #DBSCAN
 plot(sk)
+
+#CONECTIVIDADE
+connectivity(Data=data, clusters=clusters2, neighbSize = grupo)
+#DUNN
+dunn(clusters=clusters2, Data = data, method = "euclidean")
 
 ########################################################################
 #PLOT
@@ -154,3 +169,7 @@ dev.off()
 for(i in 1:80){
 scatterplot3d(pca$x[1,], pca$x[2,], pca$x[3,], angle=i, main="3D Scatterplot")
 }
+
+for(i in sort(unique(clusters))){
+		points(pca$x[which(clusters==i),], col=(i+1))
+	}
